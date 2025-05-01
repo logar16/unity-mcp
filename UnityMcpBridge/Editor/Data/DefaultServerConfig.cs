@@ -1,6 +1,6 @@
-using UnityMcpBridge.Editor.Models;
+using UnityMcp.Editor.Models;
 
-namespace UnityMcpBridge.Editor.Data
+namespace UnityMcp.Editor.Data
 {
     public class DefaultServerConfig : ServerConfig
     {
@@ -15,4 +15,3 @@ namespace UnityMcpBridge.Editor.Data
         public new float retryDelay = 1.0f;
     }
 }
-

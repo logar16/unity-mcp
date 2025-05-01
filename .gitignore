@@ -2,6 +2,8 @@
 .cursorrules
 .cursorignore
 CLAUDE.md
+.roo/*
+.cline*
 
 # Code-copy related files
 .clipignore

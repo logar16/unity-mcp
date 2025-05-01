@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
-using UnityMcpBridge.Editor.Data;
-using UnityMcpBridge.Editor.Helpers;
-using UnityMcpBridge.Editor.Models;
+using UnityMcp.Editor.Models;
+using UnityMcp.Editor.Data;
+using UnityMcp.Editor.Utility;
 
-namespace UnityMcpBridge.Editor.Windows
+namespace UnityMcp.Editor.Windows
 {
     public class UnityMcpEditorWindow : EditorWindow
     {
@@ -262,6 +262,12 @@ namespace UnityMcpBridge.Editor.Windows
 
         private void ToggleUnityBridge()
         {
+            if (UnityMcpBridge.IsRunning != isUnityBridgeRunning)
+            {
+                isUnityBridgeRunning = UnityMcpBridge.IsRunning;
+                Debug.LogWarning("Unity MCP Bridge status was out of date, updating.");
+                return;
+            }
             if (isUnityBridgeRunning)
             {
                 UnityMcpBridge.Stop();
@@ -369,7 +375,7 @@ namespace UnityMcpBridge.Editor.Windows
                 {
                     foreach (UnityEditor.PackageManager.PackageInfo package in request.Result)
                     {
-                        if (package.name == "com.justinpbarnett.unity-mcp")
+                        if (package.name == "com.logar16.unity-mcp")
                         {
                             string packagePath = package.resolvedPath;
                             string potentialPythonDir = Path.Combine(packagePath, "Python");
@@ -379,6 +385,7 @@ namespace UnityMcpBridge.Editor.Windows
                                 && File.Exists(Path.Combine(potentialPythonDir, "server.py"))
                             )
                             {
+                                Debug.Log($"Found Python directory: {potentialPythonDir}");
                                 return potentialPythonDir;
                             }
                         }

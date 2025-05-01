@@ -1,127 +1,159 @@
+from typing import Annotated
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP, Context
-from typing import Dict, Any, List
 from unity_connection import get_unity_connection
+from models.game_object_management import (
+    CreateGameObjectRequest,
+    ModifyGameObjectRequest,
+    DeleteGameObjectRequest,
+    FindGameObjectRequest,
+)
+from models.common import Vector3Data
+
 
 def register_manage_gameobject_tools(mcp: FastMCP):
     """Register all GameObject management tools with the MCP server."""
 
-    @mcp.tool()
-    def manage_gameobject(
+    @mcp.tool(name="create_gameobject")
+    def create_gameobject(
         ctx: Context,
-        action: str,
-        target: str = None,  # GameObject identifier by name or path
-        search_method: str = None,
-        # --- Combined Parameters for Create/Modify ---
-        name: str = None,  # Used for both 'create' (new object name) and 'modify' (rename)
-        tag: str = None,  # Used for both 'create' (initial tag) and 'modify' (change tag)
-        parent: str = None,  # Used for both 'create' (initial parent) and 'modify' (change parent)
-        position: List[float] = None,
-        rotation: List[float] = None,
-        scale: List[float] = None,
-        components_to_add: List[str] = None,  # List of component names to add
-        primitive_type: str = None,
-        save_as_prefab: bool = False,
-        prefab_path: str = None,
-        prefab_folder: str = "Assets/Prefabs",
-        # --- Parameters for 'modify' ---
-        set_active: bool = None,
-        layer: str = None,  # Layer name
-        components_to_remove: List[str] = None,
-        component_properties: Dict[str, Dict[str, Any]] = None,
-        # --- Parameters for 'find' ---
-        search_term: str = None,
-        find_all: bool = False,
-        search_in_children: bool = False,
-        search_inactive: bool = False,
-        # -- Component Management Arguments --
-        component_name: str = None,
-    ) -> Dict[str, Any]:
-        """Manages GameObjects: create, modify, delete, find, and component operations.
+        name: str,
+        parent: Annotated[
+            str | None,
+            Field(description="Parent GameObject. Can be specified by name, hierarchy path, or instance ID."),
+        ] = None,
+        position: dict | None = None,
+        rotation: dict | None = None,
+        scale: dict | None = None,
+        tag: str | None = None,
+        layer: str | None = None,
+        components_to_add: Annotated[
+            list[str] | None,
+            Field(
+                description="List of component type names to add to the GameObject. Each entry should be a fully qualified type name or short type name."
+            ),
+        ] = None,
+        primitive_type: Annotated[
+            str | None,
+            Field(
+                description="Primitive type to create (optional). Allowed values: Cube, Sphere, Capsule, Cylinder, Plane, Quad."
+            ),
+        ] = None,
+    ) -> dict:
+        """Creates a new GameObject in the Unity scene."""
+        unity_connection = get_unity_connection()
+        request = CreateGameObjectRequest(
+            name=name,
+            parent=parent,
+            position=position,
+            rotation=rotation,
+            scale=scale,
+            tag=tag,
+            layer=layer,
+            components_to_add=components_to_add,
+            primitive_type=primitive_type,
+        )
+        return unity_connection.send_request(request)
 
-        Args:
-            action: Operation (e.g., 'create', 'modify', 'find', 'add_component', 'remove_component', 'set_component_property').
-            target: GameObject identifier (name or path string) for modify/delete/component actions.
-            search_method: How to find objects ('by_name', 'by_id', 'by_path', etc.). Used with 'find' and some 'target' lookups.
-            name: GameObject name - used for both 'create' (initial name) and 'modify' (rename).
-            tag: Tag name - used for both 'create' (initial tag) and 'modify' (change tag).
-            parent: Parent GameObject reference - used for both 'create' (initial parent) and 'modify' (change parent).
-            layer: Layer name - used for both 'create' (initial layer) and 'modify' (change layer).
-            component_properties: Dict mapping Component names to their properties to set.
-                                  Example: {"Rigidbody": {"mass": 10.0, "useGravity": True}},
-                                  To set references:
-                                  - Use asset path string for Prefabs/Materials, e.g., {"MeshRenderer": {"material": "Assets/Materials/MyMat.mat"}}
-                                  - Use a dict for scene objects/components, e.g.:
-                                    {"MyScript": {"otherObject": {"find": "Player", "method": "by_name"}}} (assigns GameObject)
-                                    {"MyScript": {"playerHealth": {"find": "Player", "component": "HealthComponent"}}} (assigns Component)
-                                  Example set nested property:
-                                  - Access shared material: {"MeshRenderer": {"sharedMaterial.color": [1, 0, 0, 1]}}
-            components_to_add: List of component names to add.
-            Action-specific arguments (e.g., position, rotation, scale for create/modify;
-                     component_name for component actions;
-                     search_term, find_all for 'find').
+    @mcp.tool(name="modify_gameobject")
+    def modify_gameobject(
+        ctx: Context,
+        target: Annotated[
+            str, Field(description="Target GameObject. Can be specified by name, hierarchy path, or instance ID.")
+        ],
+        name: str | None = None,
+        tag: str | None = None,
+        layer: str | None = None,
+        parent: Annotated[
+            str | None,
+            Field(description="Parent GameObject. Can be specified by name, hierarchy path, or instance ID."),
+        ] = None,
+        position: dict | None = None,
+        rotation: dict | None = None,
+        scale: dict | None = None,
+        set_active: Annotated[
+            dict | None,
+            Field(
+                description="Whether to set the GameObject active or inactive. If true, sets the GameObject active; if false, sets it inactive."
+            ),
+        ] = None,
+        components_to_add: Annotated[
+            list[str] | None,
+            Field(
+                description="List of component type names to add to the GameObject. Each entry should be a fully qualified type name or short type name."
+            ),
+        ] = None,
+        components_to_remove: Annotated[
+            list[str] | None,
+            Field(
+                description="List of component type names to remove from the GameObject. Each entry should be a fully qualified type name or short type name."
+            ),
+        ] = None,
+        component_properties: Annotated[
+            dict | None,
+            Field(
+                description="Properties to set on components, grouped by component type. Dictionary format: { component_type: { property_name: value } }"
+            ),
+        ] = None,
+    ) -> dict:
+        """Modifies properties and components of an existing GameObject."""
+        unity_connection = get_unity_connection()
+        request = ModifyGameObjectRequest(
+            target=target,
+            name=name,
+            tag=tag,
+            layer=layer,
+            parent=parent,
+            position=position,
+            rotation=rotation,
+            scale=scale,
+            set_active=set_active,
+            components_to_add=components_to_add,
+            components_to_remove=components_to_remove,
+            component_properties=component_properties,
+        )
+        return unity_connection.send_request(request)
 
-        Returns:
-            Dictionary with operation results ('success', 'message', 'data').
-        """
-        try:
-            # --- Early check for attempting to modify a prefab asset ---
-            # ----------------------------------------------------------
+    @mcp.tool(name="delete_gameobject")
+    def delete_gameobject(
+        ctx: Context,
+        target: Annotated[
+            str, Field(description="Target GameObject. Can be specified by name, hierarchy path, or instance ID.")
+        ],
+    ) -> dict:
+        """Deletes a GameObject from the Unity scene."""
+        unity_connection = get_unity_connection()
+        request = DeleteGameObjectRequest(
+            target=target,
+        )
+        return unity_connection.send_request(request)
 
-            # Prepare parameters, removing None values
-            params = {
-                "action": action,
-                "target": target,
-                "searchMethod": search_method,
-                "name": name,
-                "tag": tag,
-                "parent": parent,
-                "position": position,
-                "rotation": rotation,
-                "scale": scale,
-                "componentsToAdd": components_to_add,
-                "primitiveType": primitive_type,
-                "saveAsPrefab": save_as_prefab,
-                "prefabPath": prefab_path,
-                "prefabFolder": prefab_folder,
-                "setActive": set_active,
-                "layer": layer,
-                "componentsToRemove": components_to_remove,
-                "componentProperties": component_properties,
-                "searchTerm": search_term,
-                "findAll": find_all,
-                "searchInChildren": search_in_children,
-                "searchInactive": search_inactive,
-                "componentName": component_name
-            }
-            params = {k: v for k, v in params.items() if v is not None}
-            
-            # --- Handle Prefab Path Logic ---
-            if action == "create" and params.get("saveAsPrefab"): # Check if 'saveAsPrefab' is explicitly True in params
-                if "prefabPath" not in params:
-                    if "name" not in params or not params["name"]:
-                        return {"success": False, "message": "Cannot create default prefab path: 'name' parameter is missing."}
-                    # Use the provided prefab_folder (which has a default) and the name to construct the path
-                    constructed_path = f"{prefab_folder}/{params['name']}.prefab"
-                    # Ensure clean path separators (Unity prefers '/')
-                    params["prefabPath"] = constructed_path.replace("\\", "/")
-                elif not params["prefabPath"].lower().endswith(".prefab"):
-                    return {"success": False, "message": f"Invalid prefab_path: '{params['prefabPath']}' must end with .prefab"}
-            # Ensure prefab_folder itself isn't sent if prefabPath was constructed or provided
-            # The C# side only needs the final prefabPath
-            params.pop("prefab_folder", None) 
-            # --------------------------------
-            
-            # Send the command to Unity via the established connection
-            # Use the get_unity_connection function to retrieve the active connection instance
-            # Changed "MANAGE_GAMEOBJECT" to "manage_gameobject" to potentially match Unity expectation
-            response = get_unity_connection().send_command("manage_gameobject", params)
-
-            # Check if the response indicates success
-            # If the response is not successful, raise an exception with the error message
-            if response.get("success"):
-                return {"success": True, "message": response.get("message", "GameObject operation successful."), "data": response.get("data")}
-            else:
-                return {"success": False, "message": response.get("error", "An unknown error occurred during GameObject management.")}
-
-        except Exception as e:
-            return {"success": False, "message": f"Python error managing GameObject: {str(e)}"} 
+    @mcp.tool(name="find_gameobject")
+    def find_gameobject(
+        ctx: Context,
+        name: str | None = None,
+        tag: str | None = None,
+        path: str | None = None,
+        find_all: Annotated[
+            bool | None,
+            Field(
+                description="Whether to return all matching GameObjects or only the first match. If true, returns all matches; if false, returns only the first match."
+            ),
+        ] = None,
+        search_inactive: Annotated[
+            bool | None,
+            Field(
+                description="Whether to include inactive GameObjects in the search. If true, includes inactive objects; if false, only active objects are considered."
+            ),
+        ] = None,
+    ) -> dict:
+        """Finds GameObjects in the Unity scene by name, tag, or path."""
+        unity_connection = get_unity_connection()
+        request = FindGameObjectRequest(
+            name=name,
+            tag=tag,
+            path=path,
+            find_all=find_all,
+            search_inactive=search_inactive,
+        )
+        return unity_connection.send_request(request)

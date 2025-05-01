@@ -1,9 +1,9 @@
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
-using UnityMcpBridge.Editor.Models;
+using UnityMcp.Editor.Models;
 
-namespace UnityMcpBridge.Editor.Windows
+namespace UnityMcp.Editor.Windows
 {
     // Editor window to display manual configuration instructions
     public class ManualConfigEditorWindow : EditorWindow

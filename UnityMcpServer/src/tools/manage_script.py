@@ -1,74 +1,90 @@
-from mcp.server.fastmcp import FastMCP, Context
-from typing import Dict, Any
-from unity_connection import get_unity_connection
-import os
-import base64
+from mcp.server.fastmcp import FastMCP
+from typing import Annotated
+from pydantic import Field
+from UnityMcpServer.src.unity_connection import get_unity_connection
+from UnityMcpServer.src.models.script_management import (
+    ReadScriptRequest,
+    DeleteScriptRequest,
+    CreateScriptRequest,
+    UpdateScriptRequest,
+)
+
 
 def register_manage_script_tools(mcp: FastMCP):
-    """Register all script management tools with the MCP server."""
 
-    @mcp.tool()
-    def manage_script(
-        ctx: Context,
-        action: str,
+    @mcp.tool(name="read_script")
+    def read_script(
         name: str,
-        path: str,
-        contents: str,
-        script_type: str,
-        namespace: str
-    ) -> Dict[str, Any]:
-        """Manages C# scripts in Unity (create, read, update, delete).
-        Make reference variables public for easier access in the Unity Editor.
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional. Relative to the Assets folder. Used to identify the location of the script. If omitted, defaults to 'Scripts'."
+            ),
+        ] = None,
+        id: str | None = None,
+    ):
+        req = ReadScriptRequest(name=name, path=path, id=id, action="read_script")
+        return get_unity_connection().send_request(req)
 
-        Args:
-            action: Operation ('create', 'read', 'update', 'delete').
-            name: Script name (no .cs extension).
-            path: Asset path (default: "Assets/").
-            contents: C# code for 'create'/'update'.
-            script_type: Type hint (e.g., 'MonoBehaviour').
-            namespace: Script namespace.
+    @mcp.tool(name="delete_script")
+    def delete_script(
+        name: str,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional. Relative to the Assets folder. Used to identify the location of the script. If omitted, defaults to 'Scripts'."
+            ),
+        ] = None,
+        id: str | None = None,
+    ):
+        req = DeleteScriptRequest(name=name, path=path, id=id, action="delete_script")
+        return get_unity_connection().send_request(req)
 
-        Returns:
-            Dictionary with results ('success', 'message', 'data').
-        """
-        try:
-            # Prepare parameters for Unity
-            params = {
-                "action": action,
-                "name": name,
-                "path": path,
-                "namespace": namespace,
-                "scriptType": script_type
-            }
-            
-            # Base64 encode the contents if they exist to avoid JSON escaping issues
-            if contents is not None:
-                if action in ['create', 'update']:
-                    # Encode content for safer transmission
-                    params["encodedContents"] = base64.b64encode(contents.encode('utf-8')).decode('utf-8')
-                    params["contentsEncoded"] = True
-                else:
-                    params["contents"] = contents
-            
-            # Remove None values so they don't get sent as null
-            params = {k: v for k, v in params.items() if v is not None}
+    @mcp.tool(name="create_script")
+    def create_script(
+        name: str,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional. Relative to the Assets folder. Used to identify or specify the location for script creation. If omitted, defaults to 'Scripts'."
+            ),
+        ] = None,
+        contents: Annotated[
+            str | None, Field(description="Full script text. If omitted, a default template is generated.")
+        ] = None,
+        script_type: Annotated[
+            str | None,
+            Field(
+                description="Optional. Determines the script template and base class. Examples: MonoBehaviour, ScriptableObject, EditorWindow."
+            ),
+        ] = None,
+        namespace: Annotated[
+            str | None, Field(description="Optional. Wraps the script in a C# namespace. Ignored if not provided.")
+        ] = None,
+        id: str | None = None,
+    ):
+        req = CreateScriptRequest(
+            name=name,
+            path=path,
+            contents=contents,
+            script_type=script_type,
+            namespace=namespace,
+            id=id,
+            action="create_script",
+        )
+        return get_unity_connection().send_request(req)
 
-            # Send command to Unity
-            response = get_unity_connection().send_command("manage_script", params)
-            
-            # Process response from Unity
-            if response.get("success"):
-                # If the response contains base64 encoded content, decode it
-                if response.get("data", {}).get("contentsEncoded"):
-                    decoded_contents = base64.b64decode(response["data"]["encodedContents"]).decode('utf-8')
-                    response["data"]["contents"] = decoded_contents
-                    del response["data"]["encodedContents"]
-                    del response["data"]["contentsEncoded"]
-                
-                return {"success": True, "message": response.get("message", "Operation successful."), "data": response.get("data")}
-            else:
-                return {"success": False, "message": response.get("error", "An unknown error occurred.")}
-
-        except Exception as e:
-            # Handle Python-side errors (e.g., connection issues)
-            return {"success": False, "message": f"Python error managing script: {str(e)}"}
+    @mcp.tool(name="update_script")
+    def update_script(
+        name: str,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional. Relative to the Assets folder. Used to identify the location of the script. If omitted, defaults to 'Scripts'."
+            ),
+        ] = None,
+        contents: Annotated[str, Field(description="Full script text to overwrite the file.")] = "",
+        id: str | None = None,
+    ):
+        req = UpdateScriptRequest(name=name, path=path, contents=contents, id=id, action="update_script")
+        return get_unity_connection().send_request(req)

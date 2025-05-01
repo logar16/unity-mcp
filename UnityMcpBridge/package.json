@@ -1,8 +1,8 @@
 {
-  "name": "com.justinpbarnett.unity-mcp",
-  "version": "2.0.0",
-  "displayName": "Unity MCP Bridge",
-  "description": "A bridge that manages and communicates with the sister application, Unity MCP Server, which allows for communications with MCP Clients like Claude Desktop or Cursor.",
+  "name": "com.logar16.unity-mcp",
+  "version": "1.0.0",
+  "displayName": "Unity MCP",
+  "description": "A bridge that manages and communicates with the sister application, Unity MCP Server, which allows for communications with MCP Clients, enabling AI-control of Unity.",
   "unity": "2020.3",
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.0.2"

@@ -1,47 +1,100 @@
+from typing import Annotated
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP, Context
-from typing import Dict, Any
 from unity_connection import get_unity_connection
+from models.scene_management import (
+    GetSceneHierarchyInput,
+    GetActiveSceneInput,
+    LoadSceneInput,
+    CreateSceneInput,
+    SaveSceneInput,
+)
+
 
 def register_manage_scene_tools(mcp: FastMCP):
     """Register all scene management tools with the MCP server."""
 
-    @mcp.tool()
-    def manage_scene(
+    @mcp.tool(name="get_scene_hierarchy")
+    def get_scene_hierarchy(
         ctx: Context,
-        action: str,
-        name: str,
-        path: str,
-        build_index: int,
-    ) -> Dict[str, Any]:
-        """Manages Unity scenes (load, save, create, get hierarchy, etc.).
+    ) -> dict:
+        req = GetSceneHierarchyInput(action="get_scene_hierarchy")
+        return get_unity_connection().send_request(req)
 
-        Args:
-            action: Operation (e.g., 'load', 'save', 'create', 'get_hierarchy').
-            name: Scene name (no extension) for create/load/save.
-            path: Asset path for scene operations (default: "Assets/").
-            build_index: Build index for load/build settings actions.
-            # Add other action-specific args as needed (e.g., for hierarchy depth)
+    @mcp.tool(name="get_active_scene")
+    def get_active_scene(
+        ctx: Context,
+    ) -> dict:
+        req = GetActiveSceneInput(action="get_active_scene")
+        return get_unity_connection().send_request(req)
 
-        Returns:
-            Dictionary with results ('success', 'message', 'data').
-        """
-        try:
-            params = {
-                "action": action,
-                "name": name,
-                "path": path,
-                "buildIndex": build_index
-            }
-            params = {k: v for k, v in params.items() if v is not None}
-            
-            # Send command to Unity
-            response = get_unity_connection().send_command("manage_scene", params)
+    @mcp.tool(name="load_scene")
+    def load_scene(
+        ctx: Context,
+        name: Annotated[
+            str | None,
+            Field(
+                description="Name of the scene to load. One way to identify the scene. If not provided, use 'path' or 'build_index'."
+            ),
+        ] = None,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Relative path (from Assets) to the scene file. One way to identify the scene. If not provided, use 'name' or 'build_index'."
+            ),
+        ] = None,
+        build_index: Annotated[
+            dict | None,
+            Field(
+                description="Build index of the scene to load. Alternative way to identify the scene. If not provided, use 'name' or 'path'."
+            ),
+        ] = None,
+    ) -> dict:
+        req = LoadSceneInput(
+            action="load_scene",
+            name=name,
+            path=path,
+            build_index=build_index,
+        )
+        return get_unity_connection().send_request(req)
 
-            # Process response
-            if response.get("success"):
-                return {"success": True, "message": response.get("message", "Scene operation successful."), "data": response.get("data")}
-            else:
-                return {"success": False, "message": response.get("error", "An unknown error occurred during scene management.")}
+    @mcp.tool(name="create_scene")
+    def create_scene(
+        ctx: Context,
+        name: str | None = None,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional directory (relative to Assets) where the scene will be created. Defaults to 'Assets/Scenes' if not specified."
+            ),
+        ] = None,
+    ) -> dict:
+        req = CreateSceneInput(
+            action="create_scene",
+            name=name,
+            path=path,
+        )
+        return get_unity_connection().send_request(req)
 
-        except Exception as e:
-            return {"success": False, "message": f"Python error managing scene: {str(e)}"}
+    @mcp.tool(name="save_scene")
+    def save_scene(
+        ctx: Context,
+        name: Annotated[
+            str | None,
+            Field(
+                description="Name to use when saving the scene. Required if saving an untitled scene or using 'Save As'."
+            ),
+        ] = None,
+        path: Annotated[
+            str | None,
+            Field(
+                description="Optional directory (relative to Assets) where the scene will be saved. If not specified, saves to the current scene's path."
+            ),
+        ] = None,
+    ) -> dict:
+        req = SaveSceneInput(
+            action="save_scene",
+            name=name,
+            path=path,
+        )
+        return get_unity_connection().send_request(req)

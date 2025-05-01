@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityMcpBridge.Editor.Models;
+using UnityMcp.Editor.Models;
 
-namespace UnityMcpBridge.Editor.Data
+namespace UnityMcp.Editor.Data
 {
     public class McpClients
     {
@@ -58,4 +58,3 @@ namespace UnityMcpBridge.Editor.Data
         }
     }
 }
-

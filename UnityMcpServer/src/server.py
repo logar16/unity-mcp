@@ -1,8 +1,7 @@
-from mcp.server.fastmcp import FastMCP, Context, Image
+from mcp.server.fastmcp import FastMCP
 import logging
-from dataclasses import dataclass
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, Any, List
+from typing import AsyncIterator, Dict, Any
 from config import config
 from tools import register_all_tools
 from unity_connection import get_unity_connection, UnityConnection
@@ -15,7 +14,8 @@ logging.basicConfig(
 logger = logging.getLogger("unity-mcp-server")
 
 # Global connection state
-_unity_connection: UnityConnection = None
+from typing import Optional
+_unity_connection: Optional[UnityConnection] = None
 
 @asynccontextmanager
 async def server_lifespan(server: FastMCP) -> AsyncIterator[Dict[str, Any]]:

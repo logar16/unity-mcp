@@ -1,51 +1,42 @@
 """
 Defines the execute_menu_item tool for running Unity Editor menu commands.
 """
-from typing import Dict, Any
+
+from typing import Annotated, Any
+from pydantic import Field
 from mcp.server.fastmcp import FastMCP, Context
-from unity_connection import get_unity_connection  # Import unity_connection module
+from unity_connection import get_unity_connection
+from models.common import ExecuteMenuItemRequest
+
 
 def register_execute_menu_item_tools(mcp: FastMCP):
     """Registers the execute_menu_item tool with the MCP server."""
 
-    @mcp.tool()
+    @mcp.tool(name="execute_menu_item")
     async def execute_menu_item(
         ctx: Context,
-        menu_path: str,
-        action: str = 'execute',
-        parameters: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
-        """Executes a Unity Editor menu item via its path (e.g., "File/Save Project").
-
-        Args:
-            ctx: The MCP context.
-            menu_path: The full path of the menu item to execute.
-            action: The operation to perform (default: 'execute').
-            parameters: Optional parameters for the menu item (rarely used).
-
-        Returns:
-            A dictionary indicating success or failure, with optional message/error.
+        menu_path: Annotated[
+            str,
+            Field(description="The full path of the Unity Editor menu item to execute. Example: 'File/Save Project'"),
+        ],
+        action: str | None = None,
+        id: str | None = None,
+    ) -> dict:
         """
-        
-        action = action.lower() if action else 'execute'
-        
-        # Prepare parameters for the C# handler
-        params_dict = {
-            "action": action,
-            "menuPath": menu_path,
-            "parameters": parameters if parameters else {},
-        }
-
-        # Remove None values
-        params_dict = {k: v for k, v in params_dict.items() if v is not None}
-
-        if "parameters" not in params_dict:
-            params_dict["parameters"] = {} # Ensure parameters dict exists
-
-        # Get Unity connection and send the command
-        # We use the unity_connection module to communicate with Unity
+        Executes a Unity Editor menu item by its full path.
+        """
         unity_conn = get_unity_connection()
-        
-        # Send command to the ExecuteMenuItem C# handler
-        # The command type should match what the Unity side expects
-        return unity_conn.send_command("execute_menu_item", params_dict) 
+        request = ExecuteMenuItemRequest(menu_path=menu_path, action=action, id=id)
+        return unity_conn.send_request(request)
+
+    # (Retain get_available_menus as-is, unrelated to this update)
+    @mcp.tool()
+    async def get_available_menus(
+        ctx: Context,
+    ) -> dict[str, Any]:
+        """
+        Gets the list of available Unity Editor menu items (currently returns an empty list).
+        """
+        # There is no Pydantic model for get_available_menus, so send is not supported via send_request.
+        # If needed, implement a request model in models/editor_control.py.
+        raise NotImplementedError("get_available_menus is not supported with the current request model system.")

@@ -1,53 +1,39 @@
 from mcp.server.fastmcp import FastMCP, Context
-from typing import Dict, Any
+from uuid import uuid4
 from unity_connection import get_unity_connection
+from models.editor_control import PlayRequest, PauseRequest, StopRequest, GetStateRequest
 
 def register_manage_editor_tools(mcp: FastMCP):
-    """Register all editor management tools with the MCP server."""
+    """Register editor management tools using Pydantic request models."""
 
-    @mcp.tool()
-    def manage_editor(
-        ctx: Context,
-        action: str,
-        wait_for_completion: bool = None,
-        # --- Parameters for specific actions ---
-        tool_name: str = None, 
-        tag_name: str = None,
-        layer_name: str = None,
-    ) -> Dict[str, Any]:
-        """Controls and queries the Unity editor's state and settings.
-
-        Args:
-            action: Operation (e.g., 'play', 'pause', 'get_state', 'set_active_tool', 'add_tag').
-            wait_for_completion: Optional. If True, waits for certain actions.
-            Action-specific arguments (e.g., tool_name, tag_name, layer_name).
-
-        Returns:
-            Dictionary with operation results ('success', 'message', 'data').
+    @mcp.tool(name="play")
+    def play(ctx: Context):
         """
-        try:
-            # Prepare parameters, removing None values
-            params = {
-                "action": action,
-                "waitForCompletion": wait_for_completion,
-                "toolName": tool_name, # Corrected parameter name to match C#
-                "tagName": tag_name,   # Pass tag name
-                "layerName": layer_name, # Pass layer name
-                # Add other parameters based on the action being performed
-                # "width": width,
-                # "height": height,
-                # etc.
-            }
-            params = {k: v for k, v in params.items() if v is not None}
-            
-            # Send command to Unity
-            response = get_unity_connection().send_command("manage_editor", params)
+        Enters play mode in the Unity Editor.
+        """
+        req = PlayRequest(id=str(uuid4()))
+        return get_unity_connection().send_request(req)
 
-            # Process response
-            if response.get("success"):
-                return {"success": True, "message": response.get("message", "Editor operation successful."), "data": response.get("data")}
-            else:
-                return {"success": False, "message": response.get("error", "An unknown error occurred during editor management.")}
+    @mcp.tool(name="pause")
+    def pause(ctx: Context):
+        """
+        Toggles pause/resume in play mode.
+        """
+        req = PauseRequest(id=str(uuid4()))
+        return get_unity_connection().send_request(req)
 
-        except Exception as e:
-            return {"success": False, "message": f"Python error managing editor: {str(e)}"}
+    @mcp.tool(name="stop")
+    def stop(ctx: Context):
+        """
+        Exits play mode in the Unity Editor.
+        """
+        req = StopRequest(id=str(uuid4()))
+        return get_unity_connection().send_request(req)
+
+    @mcp.tool(name="get_state")
+    def get_state(ctx: Context):
+        """
+        Gets the current Unity Editor state (play, pause, compile, etc).
+        """
+        req = GetStateRequest(id=str(uuid4()))
+        return get_unity_connection().send_request(req)
