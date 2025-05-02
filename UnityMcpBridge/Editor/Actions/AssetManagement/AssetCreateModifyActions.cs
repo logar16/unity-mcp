@@ -21,9 +21,11 @@ namespace UnityMcp.Editor.Actions.AssetManagement
         }
 
         // CREATE ASSET
+        // Refactored: callback-based async main-thread marshalling
         public static CreateAssetResponse HandleCreateAsset(CreateAssetRequest req)
         {
             var resp = new CreateAssetResponse();
+
             try
             {
                 if (string.IsNullOrEmpty(req.path) || string.IsNullOrEmpty(req.asset_type))
@@ -34,12 +36,17 @@ namespace UnityMcp.Editor.Actions.AssetManagement
 
                 string fullPath = req.path.Replace("\\", "/");
                 string dir = Path.GetDirectoryName(fullPath);
+
+                // Directory creation and AssetDatabase.Refresh
                 if (!Directory.Exists(dir))
                 {
                     Directory.CreateDirectory(dir);
                     AssetDatabase.Refresh();
                 }
-                if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(fullPath) != null)
+
+                // Check if asset already exists
+                bool assetExists = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(fullPath) != null;
+                if (assetExists)
                 {
                     resp.message = $"Asset already exists at path: {fullPath}";
                     return resp;
@@ -55,7 +62,8 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                     AssetDatabase.CreateFolder(parent, folderName);
                     AssetDatabase.Refresh();
                     resp.asset_path = fullPath;
-                    resp.guid = AssetDatabase.AssetPathToGUID(fullPath);
+                    string guid = AssetDatabase.AssetPathToGUID(fullPath);
+                    resp.guid = guid;
                     resp.success = true;
                     resp.message = "Folder created.";
                     return resp;
@@ -75,7 +83,7 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                         return resp;
                     }
                     string className = req.properties["scriptClass"].ToString();
-                    var soType = Type.GetType(className) ?? AppDomain.CurrentDomain.GetAssemblies()
+                    Type soType = Type.GetType(className) ?? AppDomain.CurrentDomain.GetAssemblies()
                         .SelectMany(a => a.GetTypes()).FirstOrDefault(t => t.Name == className);
                     if (soType == null || !typeof(ScriptableObject).IsAssignableFrom(soType))
                     {
@@ -87,6 +95,22 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                     AssetDatabase.CreateAsset(so, fullPath);
                     created = so;
                 }
+                else if (type == "prefab")
+                {
+                    var tempGo = new GameObject("NewPrefab");
+                    try
+                    {
+                        PrefabUtility.SaveAsPrefabAsset(tempGo, fullPath, out bool prefabSuccess);
+                        if (!prefabSuccess)
+                        {
+                            Debug.LogError($"Failed to save prefab asset at {fullPath}");
+                        }
+                    }
+                    finally
+                    {
+                        UnityEngine.Object.DestroyImmediate(tempGo);
+                    }
+                }
                 else
                 {
                     resp.message = $"Unsupported asset_type: {type}";
@@ -95,8 +119,10 @@ namespace UnityMcp.Editor.Actions.AssetManagement
 
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
+
                 resp.asset_path = fullPath;
-                resp.guid = AssetDatabase.AssetPathToGUID(fullPath);
+                string assetGuid = AssetDatabase.AssetPathToGUID(fullPath);
+                resp.guid = assetGuid;
                 resp.success = true;
                 resp.message = "Asset created.";
                 return resp;
@@ -119,7 +145,9 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                     resp.message = "Missing required parameter: path.";
                     return resp;
                 }
-                var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(req.path);
+
+                UnityEngine.Object asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(req.path);
+
                 if (asset == null)
                 {
                     resp.message = $"Asset not found at path: {req.path}";
@@ -145,6 +173,7 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                 }
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
+
                 resp.success = true;
                 resp.message = "Asset modified.";
                 return resp;

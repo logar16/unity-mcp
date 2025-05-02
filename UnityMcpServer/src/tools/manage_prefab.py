@@ -19,6 +19,48 @@ from models.common import Vector3Data
 def register_manage_prefab_tools(mcp: FastMCP):
     """Register all prefab management tools with the MCP server."""
 
+    @mcp.tool(name="get_prefab_details")
+    def get_prefab_details(
+        ctx: Context,
+        prefab_path: Annotated[
+            str,
+            Field(
+                description='Path to the prefab asset, relative to the Assets folder (e.g., "Prefabs/MyPrefab.prefab").'
+            ),
+        ],
+        child_path: Annotated[
+            str | None,
+            Field(
+                description='Path to a specific GameObject within the prefab to start the query from (e.g., "Root/Child/Thing"). If null or empty, starts at the prefab root.'
+            ),
+        ] = None,
+        include_children: Annotated[
+            bool,
+            Field(
+                description="If true, recursively includes child GameObjects in the response hierarchy. If false, only the target node is returned."
+            ),
+        ] = True,
+        include_component_details: Annotated[
+            bool,
+            Field(
+                description="If true, includes detailed property information for components on the returned GameObject(s)."
+            ),
+        ] = False,
+    ) -> dict:
+        """
+        Retrieves details about a prefab at the specified path.
+        """
+        from models.prefab_management import GetPrefabDetailsRequest
+
+        request = GetPrefabDetailsRequest(
+            prefab_path=prefab_path,
+            child_path=child_path,
+            include_children=include_children,
+            include_component_details=include_component_details,
+        )
+        conn = get_unity_connection()
+        return conn.send_request(request)
+
     @mcp.tool(name="add_prefab_child")
     def add_prefab_child(
         ctx: Context,

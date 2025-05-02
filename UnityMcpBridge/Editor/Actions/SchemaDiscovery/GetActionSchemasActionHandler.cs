@@ -19,7 +19,6 @@ namespace UnityMcp.Editor.Actions
 
         static GetActionSchemasActionHandler()
         {
-            Debug.Log("[UnityMcp] Registering 'get_action_schemas' action handler.");
             ActionRegistry.RegisterAction<GetActionSchemasRequest>("get_action_schemas", Handle);
         }
 

@@ -26,11 +26,12 @@ namespace UnityMcp.Editor.Models
             return this;
         }
 
-        public BaseActionResponse Success(BaseActionRequest request)
+        public BaseActionResponse Success(BaseActionRequest request, string message = null)
         {
             id = request.id;
             action = request.action;
             success = true;
+            this.message = message;
             return this;
         }
     }

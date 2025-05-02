@@ -4,60 +4,151 @@ using System.Collections.Generic;
 
 namespace UnityMcp.Editor.Models
 {
-    public class GetPrefabInfoRequest : BaseActionRequest
+    /// <summary>
+    /// Request for retrieving details about a prefab asset.
+    /// </summary>
+    public class GetPrefabDetailsRequest : BaseActionRequest
     {
+        /// <summary>
+        /// Path to the prefab asset, relative to the Assets folder (e.g., "Prefabs/MyPrefab.prefab").
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("prefab_path")]
         [SchemaDocumentation("Path to the prefab asset, relative to the Assets folder (e.g., \"Prefabs/MyPrefab.prefab\").")]
         public string prefab_path { get; set; }
 
-        [Newtonsoft.Json.JsonProperty("detail_level")]
-        [SchemaDocumentation("Level of detail to return.", Notes = "Allowed values: \"summary\", \"detailed\", \"component_details\".")]
-        public string detail_level { get; set; }
-
+        /// <summary>
+        /// Path to a specific GameObject within the prefab to start the query from.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("child_path")]
-        [SchemaDocumentation("Path to a child GameObject within the prefab (e.g., \"Root/Child/Gun\"). Required for \"component_details\".")]
+        [SchemaDocumentation("Path to a specific GameObject within the prefab to start the query from (e.g., \"Root/Child/Gun\"). If null or empty, starts at the prefab root.")]
         public string child_path { get; set; }
 
+        /// <summary>
+        /// If true, recursively includes child GameObjects in the response hierarchy.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("include_children")]
+        [SchemaDocumentation("If true, recursively includes child GameObjects in the response hierarchy. If false, only the target node is returned.")]
+        public bool include_children { get; set; } = true;
+
+        /// <summary>
+        /// If true, includes detailed property information for components on the returned GameObject(s).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("include_component_details")]
+        [SchemaDocumentation("If true, includes detailed property information for components on the returned GameObject(s).")]
+        public bool include_component_details { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Response containing details about a prefab asset.
+    /// </summary>
+    public class GetPrefabDetailsResponse : BaseActionResponse
+    {
+        /// <summary>
+        /// Path to the prefab asset that was queried.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("prefab_path")]
+        public string prefab_path { get; set; }
+
+        /// <summary>
+        /// The root node of the returned hierarchy.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("hierarchy")]
+        public PrefabHierarchyNode hierarchy { get; set; }
+    }
+    /// <summary>
+    /// Used for querying prefab component details
+    /// </summary>
+    public class GetPrefabInfoRequest : BaseActionRequest
+    {
+        /// <summary>
+        /// Path to the prefab asset, relative to the Assets folder.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("prefab_path")]
+        [SchemaDocumentation("Path to the prefab asset, relative to the Assets folder (e.g., \"Prefabs/MyPrefab.prefab\").")]
+        public string prefab_path { get; set; }
+
+        /// <summary>
+        /// Path to a child GameObject within the prefab.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("child_path")]
+        [SchemaDocumentation("Path to a child GameObject within the prefab (e.g., \"Root/Child/Thing\"). Required for component details.")]
+        public string child_path { get; set; }
+
+        /// <summary>
+        /// Fully qualified type name of the component.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("component_type")]
-        [SchemaDocumentation("Fully qualified type name or name of the component (e.g., \"UnityEngine.Rigidbody\"). Required for \"component_details\".")]
+        [SchemaDocumentation("Fully qualified type name or name of the component (e.g., \"UnityEngine.Rigidbody\"). Required for component details.")]
         public string component_type { get; set; }
     }
 
-    public class PrefabInfoSummary
+
+    /// <summary>
+    /// Represents detailed information about a component including its type and properties.
+    /// </summary>
+    public class DetailedComponentInfo
     {
-        [Newtonsoft.Json.JsonProperty("prefab_path")]
-        public string prefab_path { get; set; }
-        [Newtonsoft.Json.JsonProperty("root_name")]
-        public string root_name { get; set; }
-        [Newtonsoft.Json.JsonProperty("root_tag")]
-        public string root_tag { get; set; }
-        [Newtonsoft.Json.JsonProperty("root_layer")]
-        public int root_layer { get; set; }
-        [Newtonsoft.Json.JsonProperty("root_component_count")]
-        public int root_component_count { get; set; }
+        /// <summary>
+        /// Fully qualified type name of the component.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("type_name")]
+        public string type_name { get; set; }
+
+        /// <summary>
+        /// Serialized public properties and fields of the component.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("properties")]
+        public Dictionary<string, object> properties { get; set; }
     }
 
+    /// <summary>
+    /// Represents a node in the prefab hierarchy with its properties and optional children.
+    /// </summary>
     public class PrefabHierarchyNode
     {
+        /// <summary>
+        /// Name of the GameObject.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("name")]
         public string name { get; set; }
+
+        /// <summary>
+        /// Full path from the prefab root to this GameObject.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("path")]
         public string path { get; set; }
+
+        /// <summary>
+        /// Tag of the GameObject.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("tag")]
         public string tag { get; set; }
+
+        /// <summary>
+        /// Layer index of the GameObject.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("layer")]
         public int layer { get; set; }
+
+        /// <summary>
+        /// List of component type names attached to this GameObject.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("component_types")]
         public List<string> component_types { get; set; }
+
+        /// <summary>
+        /// Detailed component information. Populated only if include_component_details was true.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("components")]
+        public List<DetailedComponentInfo> components { get; set; }
+
+        /// <summary>
+        /// List of child nodes. Populated only if include_children was true.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("children")]
         public List<PrefabHierarchyNode> children { get; set; }
     }
 
-    public class PrefabInfoDetailed : PrefabInfoSummary
-    {
-        [Newtonsoft.Json.JsonProperty("hierarchy")]
-        public PrefabHierarchyNode hierarchy { get; set; }
-    }
 
     public class PrefabComponentDetails
     {
@@ -71,10 +162,6 @@ namespace UnityMcp.Editor.Models
 
     public class GetPrefabInfoResponse : BaseActionResponse
     {
-        [Newtonsoft.Json.JsonProperty("summary")]
-        public PrefabInfoSummary summary { get; set; }
-        [Newtonsoft.Json.JsonProperty("detailed")]
-        public PrefabInfoDetailed detailed { get; set; }
         [Newtonsoft.Json.JsonProperty("component_details")]
         public PrefabComponentDetails component_details { get; set; }
     }

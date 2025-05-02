@@ -140,3 +140,25 @@ class ModifyPrefabComponentRequest(BaseActionRequest):
         dict[str, object],
         "Dictionary of property names and their new values. Notes: Format: property name (string) -> value (object)."
     ]
+
+
+class GetPrefabDetailsRequest(BaseActionRequest):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["get_prefab_details"] = "get_prefab_details"
+    prefab_path: Annotated[
+        str,
+        'Path to the prefab asset, relative to the Assets folder (e.g., "Prefabs/MyPrefab.prefab").'
+    ]
+    child_path: Annotated[
+        str | None,
+        'Path to a specific GameObject within the prefab to start the query from (e.g., "Root/Child/Gun"). If null or empty, starts at the prefab root.'
+    ] = None
+    include_children: Annotated[
+        bool,
+        "If true, recursively includes child GameObjects in the response hierarchy. If false, only the target node is returned."
+    ] = True
+    include_component_details: Annotated[
+        bool,
+        "If true, includes detailed property information for components on the returned GameObject(s)."
+    ] = False
+    # action and id are included in the schema, but action is set above, and id is handled by BaseActionRequest if needed.

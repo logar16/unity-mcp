@@ -1,9 +1,11 @@
 // Copyright (c) Vibraint. All rights reserved.
 
 using System;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityMcp.Editor.Core;
 using UnityMcp.Editor.Models;
+using UnityMcp.Editor.Utility;
 
 namespace UnityMcp.Editor.Actions.AssetManagement
 {
@@ -28,14 +30,19 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                     resp.message = "Missing required parameters: path or destination.";
                     return resp;
                 }
+
                 string error = AssetDatabase.MoveAsset(req.path, req.destination);
+
                 if (!string.IsNullOrEmpty(error))
                 {
                     resp.message = $"MoveAsset error: {error}";
                     return resp;
                 }
+
+                string guid = AssetDatabase.AssetPathToGUID(req.destination);
+
                 resp.new_path = req.destination;
-                resp.guid = AssetDatabase.AssetPathToGUID(req.destination);
+                resp.guid = guid;
                 resp.success = true;
                 resp.message = "Asset moved.";
                 return resp;
@@ -58,7 +65,9 @@ namespace UnityMcp.Editor.Actions.AssetManagement
                     resp.message = "Missing required parameter: path.";
                     return resp;
                 }
+
                 bool result = AssetDatabase.DeleteAsset(req.path);
+
                 if (!result)
                 {
                     resp.message = "DeleteAsset failed.";

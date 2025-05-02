@@ -75,17 +75,65 @@ namespace UnityMcp.Editor.Models
     public class ImportAssetResponse : BaseActionResponse { }
 
     // GET ASSET INFO
-    public class GetAssetInfoRequest : AssetActionRequest { }
+    /// <summary>
+    /// Request for retrieving information about a specific asset.
+    /// </summary>
+    /// <summary>
+    /// Request for retrieving information about a specific asset.
+    /// Optionally specify detail_level to control the amount of information returned.
+    /// </summary>
+    public class GetAssetInfoRequest : AssetActionRequest
+    {
+        /// <summary>
+        /// Level of detail to return. Supported values: "basic" (default), "full_serialized".
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("detail_level")]
+        [SchemaDocumentation(
+            "Level of detail to return.",
+            Notes = "Optional. Supported values: \"basic\" (default), \"full_serialized\". If \"full_serialized\", returns all visible serialized properties."
+        )]
+        public string detail_level { get; set; } = "basic";
+    }
+
+    /// <summary>
+    /// Response containing information about a specific asset.
+    /// Includes basic info by default. If requested, may include serialized_properties.
+    /// </summary>
     public class GetAssetInfoResponse : BaseActionResponse
     {
+        /// <summary>
+        /// Type of the asset.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("asset_type")]
         public string asset_type { get; set; }
+
+        /// <summary>
+        /// Path to the asset.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("asset_path")]
         public string asset_path { get; set; }
+
+        /// <summary>
+        /// GUID of the asset.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("guid")]
         public string guid { get; set; }
+
+        /// <summary>
+        /// Name of the asset.
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("name")]
         public string name { get; set; }
+
+        /// <summary>
+        /// Dictionary of serialized property paths and their values (if detail_level is "full_serialized").
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("serialized_properties")]
+        [SchemaDocumentation(
+            "Dictionary of serialized property paths and their values.",
+            Notes = "Optional. Present only if detail_level is \"full_serialized\". Keys are property paths, values are property values."
+        )]
+        public Dictionary<string, object> serialized_properties { get; set; }
     }
 
     // SEARCH ASSETS

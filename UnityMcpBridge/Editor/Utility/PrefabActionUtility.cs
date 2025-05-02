@@ -12,6 +12,8 @@ namespace UnityMcp.Editor.Utility
 {
     public static class PrefabActionUtility
     {
+        // --- MCP get_prefab_details helpers ---
+
         public static GameObject LoadPrefabRoot(string prefabPath)
         {
             if (string.IsNullOrEmpty(prefabPath))
@@ -39,20 +41,15 @@ namespace UnityMcp.Editor.Utility
             }
         }
 
-        public static PrefabInfoSummary GetSummary(GameObject prefabRoot, string prefabPath)
-        {
-            if (prefabRoot == null) return null;
-            return new PrefabInfoSummary
-            {
-                prefab_path = prefabPath,
-                root_name = prefabRoot.name,
-                root_tag = prefabRoot.tag,
-                root_layer = prefabRoot.layer,
-                root_component_count = prefabRoot.GetComponents<Component>().Length
-            };
-        }
-
-        public static PrefabHierarchyNode BuildHierarchy(GameObject go, string pathPrefix = "")
+        /// <summary>
+        /// Builds a hierarchy node for the given GameObject, optionally including children and component details.
+        /// </summary>
+        /// <param name="go">The GameObject to build the hierarchy for</param>
+        /// <param name="pathPrefix">Path prefix for this node</param>
+        /// <param name="includeChildren">Whether to include child nodes</param>
+        /// <param name="includeComponentDetails">Whether to include detailed component information</param>
+        /// <returns>A PrefabHierarchyNode representing this GameObject and optionally its hierarchy</returns>
+        public static PrefabHierarchyNode BuildHierarchy(GameObject go, string pathPrefix = "", bool includeChildren = true, bool includeComponentDetails = false)
         {
             if (go == null) return null;
             string path = string.IsNullOrEmpty(pathPrefix) ? go.name : pathPrefix + "/" + go.name;
@@ -62,14 +59,37 @@ namespace UnityMcp.Editor.Utility
                 path = path,
                 tag = go.tag,
                 layer = go.layer,
-                component_types = go.GetComponents<Component>().Select(c => c.GetType().FullName).ToList(),
-                children = new List<PrefabHierarchyNode>()
+                component_types = go.GetComponents<Component>().Select(c => c.GetType().FullName).ToList()
             };
-            for (int i = 0; i < go.transform.childCount; i++)
+            // Add detailed component information if requested
+            if (includeComponentDetails)
             {
-                var child = go.transform.GetChild(i).gameObject;
-                node.children.Add(BuildHierarchy(child, path));
+                node.components = new List<DetailedComponentInfo>();
+                foreach (var comp in go.GetComponents<Component>())
+                {
+                    if (comp != null)
+                    {
+                        var details = new DetailedComponentInfo
+                        {
+                            type_name = comp.GetType().FullName,
+                            properties = ComponentUtility.GetSerializableProperties(comp)
+                        };
+                        node.components.Add(details);
+                    }
+                }
             }
+
+            // Add children if requested
+            if (includeChildren && go.transform.childCount > 0)
+            {
+                node.children = new List<PrefabHierarchyNode>();
+                for (int i = 0; i < go.transform.childCount; i++)
+                {
+                    var child = go.transform.GetChild(i).gameObject;
+                    node.children.Add(BuildHierarchy(child, path, includeChildren, includeComponentDetails));
+                }
+            }
+
             return node;
         }
 
@@ -97,31 +117,6 @@ namespace UnityMcp.Editor.Utility
             return current;
         }
 
-        public static PrefabComponentDetails GetComponentDetails(GameObject go, string childPath, string componentType)
-        {
-            if (go == null || string.IsNullOrEmpty(componentType)) return null;
-            var comp = go.GetComponents<Component>().FirstOrDefault(c =>
-                c.GetType().FullName == componentType || c.GetType().Name == componentType);
-            if (comp == null) return null;
-
-            var props = new Dictionary<string, object>();
-            var type = comp.GetType();
-            BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
-            foreach (var prop in type.GetProperties(flags).Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
-            {
-                try { props[prop.Name] = prop.GetValue(comp); } catch { }
-            }
-            foreach (var field in type.GetFields(flags))
-            {
-                try { props[field.Name] = field.GetValue(comp); } catch { }
-            }
-            return new PrefabComponentDetails
-            {
-                child_path = childPath,
-                type_name = type.FullName,
-                properties = props
-            };
-        }
 
         // --- NEW: Create and configure a child GameObject under a parent ---
         public static GameObject CreateChildGameObject(GameObject parent, PrefabChildProperties props)

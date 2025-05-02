@@ -13,18 +13,9 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
     {
         static PrefabComponentActionsHandler()
         {
-            ActionRegistry.RegisterAction<AddPrefabComponentRequest>(
-                "add_prefab_component",
-                HandleAddPrefabComponent
-            );
-            ActionRegistry.RegisterAction<RemovePrefabComponentRequest>(
-                "remove_prefab_component",
-                HandleRemovePrefabComponent
-            );
-            ActionRegistry.RegisterAction<ModifyPrefabComponentRequest>(
-                "modify_prefab_component",
-                HandleModifyPrefabComponent
-            );
+            ActionRegistry.RegisterAction<AddPrefabComponentRequest>("add_prefab_component", HandleAddPrefabComponent);
+            ActionRegistry.RegisterAction<RemovePrefabComponentRequest>("remove_prefab_component", HandleRemovePrefabComponent);
+            ActionRegistry.RegisterAction<ModifyPrefabComponentRequest>("modify_prefab_component", HandleModifyPrefabComponent);
         }
 
         public static AddPrefabComponentResponse HandleAddPrefabComponent(AddPrefabComponentRequest request)
@@ -50,7 +41,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -58,7 +49,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var comp = GameObjectActionUtility.AddComponentByType(child, request.component_type, request.component_properties);
+                Component comp = GameObjectActionUtility.AddComponentByType(child, request.component_type, request.component_properties);
                 if (comp == null)
                 {
                     response.success = false;
@@ -67,19 +58,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 }
 
                 response.success = true;
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error adding component: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;
@@ -108,7 +94,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -125,19 +111,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 }
 
                 response.success = true;
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error removing component: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;
@@ -166,7 +147,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -183,19 +164,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 }
 
                 response.success = true;
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error modifying component: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;

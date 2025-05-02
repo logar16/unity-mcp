@@ -49,6 +49,11 @@ class ImportAssetRequest(AssetActionRequest):
 class GetAssetInfoRequest(AssetActionRequest):
     model_config = ConfigDict(extra='forbid')
     action: Literal["get_asset_info"] = "get_asset_info"
+    detail_level: str = Field(
+        default="basic",
+        description='Level of detail to return.',
+        json_schema_extra={"x-notes": 'Optional. Supported values: "basic" (default), "full_serialized". If "full_serialized", returns all visible serialized properties.'}
+    )
 
 class SearchAssetsRequest(BaseActionRequest):
     model_config = ConfigDict(extra='forbid')

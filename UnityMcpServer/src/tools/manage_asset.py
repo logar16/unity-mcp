@@ -24,7 +24,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="create_asset")
     async def create_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to create. Must be a valid Unity asset path (e.g., "Assets/Prefabs/TestPrefab.prefab").'
+            ),
+        ],
         asset_type: Annotated[
             str,
             Field(
@@ -80,7 +85,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="modify_asset")
     async def modify_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to modify. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
         properties: Annotated[
             dict[str, Any],
             Field(
@@ -101,7 +111,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="move_asset")
     async def move_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to move. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
         destination: Annotated[
             str,
             Field(
@@ -122,7 +137,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="delete_asset")
     async def delete_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to delete. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
     ) -> dict[str, Any]:
         """
         Deletes an asset in Unity.
@@ -136,7 +156,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="import_asset")
     async def import_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to import. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
     ) -> dict[str, Any]:
         """
         Imports an asset into Unity.
@@ -150,13 +175,25 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="get_asset_info")
     async def get_asset_info(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to query. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
+        detail_level: Annotated[
+            str,
+            Field(
+                description='Level of detail to return. Optional. Supported values: "basic" (default), "full_serialized". If "full_serialized", returns all visible serialized properties.'
+            ),
+        ] = "basic",
     ) -> dict[str, Any]:
         """
         Retrieves information about an asset in Unity.
         """
         req = GetAssetInfoRequest(
             path=path,
+            detail_level=detail_level,
         )
         connection = get_unity_connection()
         return connection.send_request(req)
@@ -164,7 +201,12 @@ def register_manage_asset_tools(mcp: FastMCP):
     @mcp.tool(name="duplicate_asset")
     async def duplicate_asset(
         ctx: Context,
-        path: str,
+        path: Annotated[
+            str,
+            Field(
+                description='Path to the asset to duplicate. Must be a valid Unity asset path (e.g., "Assets/Folder/SubFolder/Asset.asset").'
+            ),
+        ],
         destination: Annotated[
             str,
             Field(

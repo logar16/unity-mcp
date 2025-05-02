@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -19,6 +20,16 @@ namespace UnityMcp.Editor
         private static Thread _listenerThread;
         private static bool _running;
         private const int Port = 6400;
+
+        // Command queue for main-thread processing
+        private class QueuedRequest
+        {
+            public JObject Request;
+            public Action<string> SetResult;
+            public Action<Exception> SetError;
+        }
+        private static readonly Queue<QueuedRequest> _commandQueue = new Queue<QueuedRequest>();
+        private static readonly object _queueLock = new object();
 
         public static bool IsRunning => _running;
 
@@ -41,6 +52,7 @@ namespace UnityMcp.Editor
             _running = true;
             _listenerThread = new Thread(ListenLoop) { IsBackground = true };
             _listenerThread.Start();
+            EditorApplication.update += ProcessCommands;
             Debug.Log($"[UnityMcp] Listening on port {Port}");
         }
 
@@ -49,6 +61,7 @@ namespace UnityMcp.Editor
             _running = false;
             try { _listener?.Stop(); } catch { }
             _listenerThread = null;
+            EditorApplication.update -= ProcessCommands;
         }
 
         private static void ListenLoop()
@@ -107,24 +120,73 @@ namespace UnityMcp.Editor
                         continue;
                     }
 
-                    try
+                    // Enqueue for main-thread processing and wait for result
+                    string respJson = null;
+                    Exception errorEx = null;
+                    using (var waitHandle = new ManualResetEventSlim(false))
                     {
-                        string respJson = ActionRegistry.RunAction(request);
+                        var queued = new QueuedRequest
+                        {
+                            Request = request,
+                            SetResult = result =>
+                            {
+                                respJson = result;
+                                waitHandle.Set();
+                            },
+                            SetError = ex =>
+                            {
+                                errorEx = ex;
+                                waitHandle.Set();
+                            }
+                        };
+                        lock (_queueLock)
+                        {
+                            _commandQueue.Enqueue(queued);
+                        }
+                        waitHandle.Wait();
+                    }
+
+                    if (errorEx != null)
+                    {
+                        var error = "{\"success\":false,\"message\":\"Internal error: " + errorEx.Message.Replace("\"", "\\\"") + "\"}";
+                        byte[] errorBytes = Encoding.UTF8.GetBytes(error);
+                        stream.Write(errorBytes, 0, errorBytes.Length);
+                    }
+                    else
+                    {
                         Debug.Log($"[UnityMcp] Sending response: {respJson}");
                         byte[] respBytes = Encoding.UTF8.GetBytes(respJson);
                         stream.Write(respBytes, 0, respBytes.Length);
-                    }
-                    catch (Exception ex)
-                    {
-                        var error = "{\"success\":false,\"message\":\"Internal error: " + ex.Message.Replace("\"", "\\\"") + "\"}";
-                        byte[] errorBytes = Encoding.UTF8.GetBytes(error);
-                        stream.Write(errorBytes, 0, errorBytes.Length);
                     }
                 }
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[UnityMcp] Client handler error: {ex}");
+            }
+        }
+        private static void ProcessCommands()
+        {
+            while (true)
+            {
+                QueuedRequest queued = null;
+                lock (_queueLock)
+                {
+                    if (_commandQueue.Count > 0)
+                        queued = _commandQueue.Dequeue();
+                }
+                if (queued == null)
+                    break;
+
+                try
+                {
+                    string result = ActionRegistry.RunAction(queued.Request);
+                    queued.SetResult(result);
+                }
+                catch (Exception ex)
+                {
+                    queued.SetError(ex);
+                }
             }
         }
     }

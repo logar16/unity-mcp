@@ -13,22 +13,10 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
     {
         static PrefabChildActionsHandler()
         {
-            ActionRegistry.RegisterAction<AddPrefabChildRequest>(
-                "add_prefab_child",
-                HandleAddPrefabChild
-            );
-            ActionRegistry.RegisterAction<RemovePrefabChildRequest>(
-                "remove_prefab_child",
-                HandleRemovePrefabChild
-            );
-            ActionRegistry.RegisterAction<RenamePrefabChildRequest>(
-                "rename_prefab_child",
-                HandleRenamePrefabChild
-            );
-            ActionRegistry.RegisterAction<ModifyPrefabChildRequest>(
-                "modify_prefab_child",
-                HandleModifyPrefabChild
-            );
+            ActionRegistry.RegisterAction<AddPrefabChildRequest>("add_prefab_child", HandleAddPrefabChild);
+            ActionRegistry.RegisterAction<RemovePrefabChildRequest>("remove_prefab_child", HandleRemovePrefabChild);
+            ActionRegistry.RegisterAction<RenamePrefabChildRequest>("rename_prefab_child", HandleRenamePrefabChild);
+            ActionRegistry.RegisterAction<ModifyPrefabChildRequest>("modify_prefab_child", HandleModifyPrefabChild);
         }
 
         public static AddPrefabChildResponse HandleAddPrefabChild(AddPrefabChildRequest request)
@@ -66,23 +54,18 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     }
                 }
 
-                var child = PrefabActionUtility.CreateChildGameObject(parent, request.child_properties);
+                GameObject child = PrefabActionUtility.CreateChildGameObject(parent, request.child_properties);
                 response.added_child_path = GameObjectActionUtility.GetHierarchyPath(child.transform);
                 response.success = true;
                 response.message = $"Child '{child.name}' added to prefab.";
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error adding child: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;
@@ -111,7 +94,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -122,19 +105,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 Object.DestroyImmediate(child, true);
                 response.success = true;
                 response.message = $"Child '{request.child_path}' removed from prefab.";
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error removing child: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;
@@ -164,7 +142,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -175,19 +153,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 child.name = request.new_name;
                 response.success = true;
                 response.message = $"Child '{request.child_path}' renamed to '{request.new_name}'.";
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error renaming child: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;
@@ -216,7 +189,7 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                     return response;
                 }
 
-                var child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
+                GameObject child = PrefabActionUtility.FindChildByPath(prefabRoot, request.child_path);
                 if (child == null)
                 {
                     response.success = false;
@@ -227,19 +200,14 @@ namespace UnityMcp.Editor.Actions.PrefabManagement
                 PrefabActionUtility.SetGameObjectProperties(child, request);
                 response.success = true;
                 response.message = $"Child '{request.child_path}' modified in prefab.";
+
+                PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
             }
             catch (System.Exception ex)
             {
                 response.success = false;
                 response.message = $"Error modifying child: {ex.Message}";
                 return response;
-            }
-            finally
-            {
-                if (prefabRoot != null && !string.IsNullOrEmpty(assetPath))
-                {
-                    PrefabActionUtility.SaveAndUnloadPrefabContents(prefabRoot, assetPath);
-                }
             }
 
             return response;

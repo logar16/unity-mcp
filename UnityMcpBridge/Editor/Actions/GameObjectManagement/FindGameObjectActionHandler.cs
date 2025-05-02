@@ -27,13 +27,6 @@ namespace UnityMcp.Editor.Actions
                 found_objects = new List<GameObjectIdentifier>()
             };
 
-            if (request == null)
-            {
-                response.success = false;
-                response.message = "Request is null.";
-                return response;
-            }
-
             IEnumerable<GameObject> candidates = null;
 
             // Search by tag

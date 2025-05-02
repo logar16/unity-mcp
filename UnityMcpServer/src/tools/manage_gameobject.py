@@ -7,8 +7,8 @@ from models.game_object_management import (
     ModifyGameObjectRequest,
     DeleteGameObjectRequest,
     FindGameObjectRequest,
+    GetGameObjectDetailsRequest,
 )
-from models.common import Vector3Data
 
 
 def register_manage_gameobject_tools(mcp: FastMCP):
@@ -135,17 +135,17 @@ def register_manage_gameobject_tools(mcp: FastMCP):
         tag: str | None = None,
         path: str | None = None,
         find_all: Annotated[
-            bool | None,
+            bool,
             Field(
-                description="Whether to return all matching GameObjects or only the first match. If true, returns all matches; if false, returns only the first match."
+                description="Whether to return all matching GameObjects or only the first match. If true, returns all matches; if false, returns only the first match. Defaults to false."
             ),
-        ] = None,
+        ] = False,
         search_inactive: Annotated[
-            bool | None,
+            bool,
             Field(
-                description="Whether to include inactive GameObjects in the search. If true, includes inactive objects; if false, only active objects are considered."
+                description="Whether to include inactive GameObjects in the search. If true, includes inactive objects; if false, only active objects are considered. Defaults to false."
             ),
-        ] = None,
+        ] = False,
     ) -> dict:
         """Finds GameObjects in the Unity scene by name, tag, or path."""
         unity_connection = get_unity_connection()
@@ -157,3 +157,34 @@ def register_manage_gameobject_tools(mcp: FastMCP):
             search_inactive=search_inactive,
         )
         return unity_connection.send_request(request)
+
+    @mcp.tool(name="get_gameobject_details")
+    def get_gameobject_details(
+        ctx: Context,
+        target: Annotated[
+            str,
+            Field(description="Target GameObject. Can be specified by name, hierarchy path, or instance ID."),
+        ],
+        include_children: Annotated[
+            bool,
+            Field(
+                description="If true, recursively includes child GameObjects in the response hierarchy. If false, only the target node is returned."
+            ),
+        ] = True,
+        include_component_details: Annotated[
+            bool,
+            Field(
+                description="If true, includes detailed property information for components on the returned GameObject(s)."
+            ),
+        ] = False,
+    ) -> dict:
+        """
+        Retrieves details about a GameObject in the Unity scene.
+        """
+        request = GetGameObjectDetailsRequest(
+            target=target,
+            include_children=include_children,
+            include_component_details=include_component_details,
+        )
+        conn = get_unity_connection()
+        return conn.send_request(request)

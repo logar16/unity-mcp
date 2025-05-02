@@ -1,7 +1,6 @@
 // Copyright (c) 2025 Logar16. All rights reserved.
 
 using System.Collections.Generic;
-using UnityMcp.Editor.Core;
 
 namespace UnityMcp.Editor.Models
 {
@@ -92,11 +91,11 @@ namespace UnityMcp.Editor.Models
 
         [Newtonsoft.Json.JsonProperty("find_all")]
         [SchemaDocumentation("Whether to return all matching GameObjects or only the first match.", Notes = "If true, returns all matches; if false, returns only the first match.")]
-        public bool find_all { get; set; }
+        public bool find_all { get; set; } = false;
 
         [Newtonsoft.Json.JsonProperty("search_inactive")]
         [SchemaDocumentation("Whether to include inactive GameObjects in the search.", Notes = "If true, includes inactive objects; if false, only active objects are considered.")]
-        public bool search_inactive { get; set; }
+        public bool search_inactive { get; set; } = false;
     }
 
     public class FindGameObjectResponse : BaseActionResponse
@@ -253,5 +252,103 @@ namespace UnityMcp.Editor.Models
 
         [Newtonsoft.Json.JsonProperty("component_details")]
         public GameObjectComponentDetails component_details { get; set; }
+    }
+    /// <summary>
+    /// Request for retrieving details about a GameObject in the scene.
+    /// </summary>
+    public class GetGameObjectDetailsRequest : BaseActionRequest
+    {
+        /// <summary>
+        /// Identifier for the root GameObject.
+        /// Can be specified by:
+        /// - Instance ID (numeric string)
+        /// - Name (exact match)
+        /// - Hierarchy path (e.g. "Parent/Child/GameObject")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("target")]
+        [SchemaDocumentation("Identifier for the root GameObject. Can be specified by instance ID (numeric string), name (exact match), or hierarchy path (e.g. \"Parent/Child/GameObject\").")]
+        public string target { get; set; }
+
+        /// <summary>
+        /// If true, recursively includes child GameObjects in the response hierarchy.
+        /// If false, only returns the target GameObject's information.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("include_children")]
+        [SchemaDocumentation("If true, recursively includes child GameObjects in the response hierarchy. If false, only returns the target GameObject's information.")]
+        public bool include_children { get; set; } = true;
+
+        /// <summary>
+        /// If true, includes detailed property information for components on the returned GameObject(s).
+        /// If false, only includes component type names.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("include_component_details")]
+        [SchemaDocumentation("If true, includes detailed property information for components on the returned GameObject(s). If false, only includes component type names.")]
+        public bool include_component_details { get; set; } = false;
+    }
+
+    /// <summary>
+    /// Represents a node in the GameObject hierarchy with its properties and optional children.
+    /// </summary>
+    public class GameObjectHierarchyNode
+    {
+        /// <summary>
+        /// Name of the GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name")]
+        public string name { get; set; }
+
+        /// <summary>
+        /// Full hierarchy path from the scene root to this GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("path")]
+        public string path { get; set; }
+
+        /// <summary>
+        /// Tag assigned to the GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("tag")]
+        public string tag { get; set; }
+
+        /// <summary>
+        /// Layer index of the GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("layer")]
+        public int layer { get; set; }
+
+        /// <summary>
+        /// Unity's internal instance ID for this GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("instance_id")]
+        public int instance_id { get; set; }
+
+        /// <summary>
+        /// List of component type names attached to this GameObject.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("component_types")]
+        public List<string> component_types { get; set; }
+
+        /// <summary>
+        /// Detailed component information. Only populated if include_component_details was true.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("components", NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public List<DetailedComponentInfo> components { get; set; }
+
+        /// <summary>
+        /// List of child nodes. Only populated if include_children was true.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("children", NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public List<GameObjectHierarchyNode> children { get; set; }
+    }
+
+    /// <summary>
+    /// Response containing details about a GameObject in the scene.
+    /// </summary>
+    public class GetGameObjectDetailsResponse : BaseActionResponse
+    {
+        /// <summary>
+        /// The root node of the returned hierarchy.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("hierarchy")]
+        public GameObjectHierarchyNode hierarchy { get; set; }
     }
 }

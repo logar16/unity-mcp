@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using UnityEngine;
 using UnityMcp.Editor.Models;
 
@@ -13,7 +15,7 @@ namespace UnityMcp.Editor.Core
         private static readonly Dictionary<string, (Type requestType, ActionHandlerDelegate handler)> _actions = new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Registers an action handler delegate and its associated request DTO.
+        /// Registers a synchronous action handler delegate and its associated request DTO.
         /// </summary>
         public static void RegisterAction<TRequest>(string actionName, Func<TRequest, BaseActionResponse> handler)
             where TRequest : BaseActionRequest, new()
@@ -39,7 +41,13 @@ namespace UnityMcp.Editor.Core
             string actionName = request["action"]?.ToString();
             var info = GetAction(actionName);
             if (info == null)
+            {
                 throw new ArgumentException($"Action '{actionName}' not registered.");
+            }
+            else if (info.Value.requestType == null)
+            {
+                throw new ArgumentException($"Action '{actionName}' has no request type defined.");
+            }
             try
             {
                 return (BaseActionRequest)request.ToObject(info.Value.requestType);
@@ -78,7 +86,7 @@ namespace UnityMcp.Editor.Core
                         success = false,
                         message = $"Action '{actionName}' not registered."
                     };
-                    return Newtonsoft.Json.JsonConvert.SerializeObject(response);
+                    return JsonConvert.SerializeObject(response);
                 }
                 var reqObj = DeserializeParams(request);
                 response = actionInfo.Value.handler(reqObj);
@@ -93,7 +101,7 @@ namespace UnityMcp.Editor.Core
                     message = $"Internal error: {ex.Message}"
                 };
             }
-            return Newtonsoft.Json.JsonConvert.SerializeObject(response);
+            return JsonConvert.SerializeObject(response);
         }
     }
 }

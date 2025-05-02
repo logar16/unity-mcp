@@ -104,21 +104,10 @@ namespace UnityMcp.Editor.Utility
                 c.GetType().FullName == componentType || c.GetType().Name == componentType);
             if (comp == null) return null;
 
-            var props = new Dictionary<string, object>();
-            var type = comp.GetType();
-            BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
-            foreach (var prop in type.GetProperties(flags).Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
-            {
-                try { props[prop.Name] = prop.GetValue(comp); } catch { }
-            }
-            foreach (var field in type.GetFields(flags))
-            {
-                try { props[field.Name] = field.GetValue(comp); } catch { }
-            }
             return new GameObjectComponentDetails
             {
-                type_name = type.FullName,
-                properties = props
+                type_name = comp.GetType().FullName,
+                properties = ComponentUtility.GetSerializableProperties(comp)
             };
         }
         public static Component AddComponentByType(GameObject go, string componentType, Dictionary<string, object> properties = null)
@@ -170,32 +159,65 @@ namespace UnityMcp.Editor.Utility
 
         private static void SetComponentProperties(Component comp, Dictionary<string, object> properties)
         {
-            var type = comp.GetType();
-            BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
-            foreach (var kvp in properties)
+            ComponentUtility.SetComponentProperties(comp, properties);
+        }
+
+        public static GameObjectHierarchyNode BuildGameObjectHierarchy(GameObject go, string pathPrefix = "", bool includeChildren = true, bool includeComponentDetails = false)
+        {
+            if (go == null)
+                return null;
+
+            // Build the full hierarchy path
+            string path = string.IsNullOrEmpty(pathPrefix)
+                ? GetHierarchyPath(go.transform)
+                : pathPrefix + "/" + go.name;
+
+            // Create and populate the node
+            var node = new GameObjectHierarchyNode
             {
-                var prop = type.GetProperty(kvp.Key, flags);
-                if (prop != null && prop.CanWrite)
+                name = go.name,
+                path = path,
+                tag = go.tag,
+                layer = go.layer,
+                instance_id = go.GetInstanceID(),
+                component_types = go.GetComponents<Component>()
+                    .Select(c => c?.GetType().FullName ?? "null")
+                    .ToList()
+            };
+
+            // Add detailed component information if requested
+            if (includeComponentDetails)
+            {
+                node.components = new List<DetailedComponentInfo>();
+                foreach (var component in go.GetComponents<Component>())
                 {
-                    try
+                    if (component != null)
                     {
-                        object value = Convert.ChangeType(kvp.Value, prop.PropertyType);
-                        prop.SetValue(comp, value);
-                        continue;
+                        node.components.Add(new DetailedComponentInfo
+                        {
+                            type_name = component.GetType().FullName,
+                            properties = ComponentUtility.GetSerializableProperties(component)
+                        });
                     }
-                    catch { }
-                }
-                var field = type.GetField(kvp.Key, flags);
-                if (field != null)
-                {
-                    try
-                    {
-                        object value = Convert.ChangeType(kvp.Value, field.FieldType);
-                        field.SetValue(comp, value);
-                    }
-                    catch { }
                 }
             }
+
+            // Process children if requested
+            if (includeChildren && go.transform.childCount > 0)
+            {
+                node.children = new List<GameObjectHierarchyNode>();
+                for (int i = 0; i < go.transform.childCount; i++)
+                {
+                    var childGo = go.transform.GetChild(i).gameObject;
+                    var childNode = BuildGameObjectHierarchy(childGo, path, includeChildren, includeComponentDetails);
+                    if (childNode != null)
+                    {
+                        node.children.Add(childNode);
+                    }
+                }
+            }
+
+            return node;
         }
     }
 }
